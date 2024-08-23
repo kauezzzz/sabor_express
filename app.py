@@ -1,164 +1,170 @@
-# Import da biblioteca os
 import os
+import json
+import sys
+from modelos.restaurante import Restaurante
+from modelos.avaliacao import Avaliacao
 
-# Lista de dicionários reprsentando os restaurantes
-restaurantes = [{'nome': 'Praça','categoria': 'Japonesa', 'ativo': False},
-                {'nome': 'Pizza Suprema','categoria': 'Pizza', 'ativo': True},
-                {'nome': 'Cantina','categoria': 'Italiano', 'ativo': False}]
-
-# Função que exibe título da aplicação
-def exibir_nome_do_programa():
-    print("""
-██████████████████████████████████████████████████████████████████████████
-█─▄▄▄▄██▀▄─██▄─▄─▀█─▄▄─█▄─▄▄▀███▄─▄▄─█▄─▀─▄█▄─▄▄─█▄─▄▄▀█▄─▄▄─█─▄▄▄▄█─▄▄▄▄█
-█▄▄▄▄─██─▀─███─▄─▀█─██─██─▄─▄████─▄█▀██▀─▀███─▄▄▄██─▄─▄██─▄█▀█▄▄▄▄─█▄▄▄▄─█
-▀▄▄▄▄▄▀▄▄▀▄▄▀▄▄▄▄▀▀▄▄▄▄▀▄▄▀▄▄▀▀▀▄▄▄▄▄▀▄▄█▄▄▀▄▄▄▀▀▀▄▄▀▄▄▀▄▄▄▄▄▀▄▄▄▄▄▀▄▄▄▄▄▀
-          """)
+# Função para obter o caminho do diretório de dados
+def get_data_dir():
+    if getattr(sys, 'frozen', False):
+        # Se estiver executando como um executável
+        return os.path.dirname(sys.executable)
+    else:
+        # Se estiver executando como script
+        return os.path.dirname(os.path.abspath(__file__))
     
-# Função que exibe o Menu de opções da aplicação 
-def exibir_opcoes():
-    print('1. Cadastrar restaurantes')
-    print('2. Listar restaurantes')
-    print('3. Alternar estado do restaurante')
-    print('4. Sair\n')
+# Nome do arquivo onde os dados dos restaurantes são armazenados
+ARQUIVO_DADOS = os.path.join(get_data_dir(), 'dados_restaurantes.json')
 
-# Função que finaliza app
-def finalizar_app():
-    exibir_subtitulo('Finalizando o app\n')
-
-# Função para voltar ao Menu principal
-def voltar_ao_menu_principal():
-    input('\nDigite uma tecla para voltar ao menu principal')
-    main()
-
-def exibir_opcoes():
-    """
-    Função para exibir o menu de opções para o usuário
-    """
-    print('1. Cadastrar restaurante')
-    print('2. Listar restaurante')
-    print('3. Alternar estado do restaurante')
-    print('4. Sair\n')
-
-def finalizar_app():
-    """
-    Função para finalizar o aplicativo
-    """
-    exibir_subtitulo('Finalizando o app\n')
-
-def voltar_ao_menu_principal():
-    """
-    Função para retornar ao menu principal após uma operação
-    """
-    input('\nDigite uma tecla para voltar ao menu principal')
-    main()
-
-def opcao_invalida():
-    """
-    Função para tratar opções inválidas inseridas pelo usuário
-    """
-    print('Opção inválida!\n')
-    voltar_ao_menu_principal()
-
-def exibir_subtitulo(texto):
-    """
-    Função para exibir um subtítulo formatado
-    :param texto: Texto do subtítulo
-    """
-    os.system('cls')  # Limpa a tela (funciona apenas no Windows)
-    linha = '*' * (len(texto))
-    print(linha)
-    print(texto)
-    print(linha)
-    print()
-
-def cadastrar_novo_restaurante():
-    """
-    Função para cadastrar um novo restaurante
-    
-    Inputs:
-    - Nome do restaurante
-    - Categoria
-
-    Outputs:
-    - Adiciona um novo restaurante à lista de restaurantes
-    """
-    exibir_subtitulo('Cadastro de novos restaurantes\n')
-    nome_do_restaurante = input('Digite o nome do restaurante que deseja cadastrar: ')
-    categoria = input(f'Digite o nome da categoria do restaurante {nome_do_restaurante}: ')
-    dados_do_restaurante = {'nome':nome_do_restaurante, 'categoria':categoria, 'ativo':False}
-    restaurantes.append(dados_do_restaurante)
-    print(f'O restaurante {nome_do_restaurante} foi cadastrado com sucesso!')
-    
-    voltar_ao_menu_principal()
-
-def alternar_estado_do_restaurante():
-    """
-    Função para ativar ou desativar um restaurante
-    """
-    exibir_subtitulo('Alternando estado do restaurante\n')
-    nome_restaurante = input('Digite o nome do restaurante que deseja alterar o estado: ')
-    restaurante_encontrado = False
-
-    for restaurante in restaurantes:
-        if nome_restaurante == restaurante['nome']:
-            restaurante_encontrado = True
-            restaurante['ativo'] = not restaurante['ativo']  # Inverte o estado (Ex. False para True)
-            mensagem = f'O restaurante {nome_restaurante} foi ativado com sucesso!' if restaurante['ativo'] else f'O restaurante {nome_restaurante} foi desativado com sucesso!'
-            print(mensagem)
-            
-    if not restaurante_encontrado:
-        print('O restaurante não foi encontrado!')
-
-    voltar_ao_menu_principal()
-
-def listar_restaurantes():
-    """
-    Função para listar todos os restaurantes cadastrados
-    """
-    exibir_subtitulo('Listando os restaurantes\n')
-
-    print(f'{'nome_restaurante'.ljust(21)} | {'categoria'.ljust(20)} | Status')
-    for restaurante in restaurantes:
-        nome_restaurante = restaurante['nome']
-        categoria = restaurante['categoria']
-        ativo = 'ativado' if restaurante['ativo'] else 'desativado'
-        print(f'-{nome_restaurante.ljust(20)} | {categoria.ljust(20)} | {ativo}')
-
-    voltar_ao_menu_principal()
-
-def escolher_opcao():
-    """
-    Função para processar a escolha do usuário no menu principal
-    """
+# FUnção para carregar dados dos restaurantes a partir de um arwquivo JSON
+def carregar_dados():
     try:
-        opcao_escolhida = int(input('Escolha uma opção: '))
+        with open(ARQUIVO_DADOS, 'r', encoding='utf-8') as arquivo:
+            dados = json.load(arquivo)
+            Restaurante.restaurantes.clear() # Limpa a lista de restaurantes antes de carregar
+            for restaurante_dados in dados:
+                restaurante = Restaurante(
+                    restaurante_dados['nome'],
+                    restaurante_dados['categoria']
+                )
+                # COnfigura o estado ativo e as avliações do restaurante
+                restaurante._ativo = restaurante_dados['ativp']
+                restaurante._avaliacao = [Avaliacao(**avaliacao) for avaliacao in restaurante_dados['avaliacao']]
+    except FileNotFoundError:
+        print(f"Arquivo de dados não encontrado. Criando um novo arquivo em {ARQUIVO_DADOS}")
+        salvar_dados() #Cria um arquivo vazio se não existir
 
-        if opcao_escolhida == 1:
-            cadastrar_novo_restaurante()
-        elif opcao_escolhida == 2:
-            listar_restaurantes()
-        elif opcao_escolhida == 3:
-            alternar_estado_do_restaurante()
-        elif opcao_escolhida == 4:
-            finalizar_app()
-        else:
-            opcao_invalida()
-    except:
-        opcao_invalida()
+# Função para salvar dados dos restaurantes em um arquivo JSON
+def salvar_dados():
+    dados = []
+    for restaurante in Restaurante.restaurantes:
+        dados.append({
+            'nome': restaurante._nome,
+            'categoria': restaurante._categoria,
+            'ativo': restaurante._ativo,
+            'avaliacao': [avaliacao.__dict__() for avaliacao in restaurante._avaliacao]
+        })
+    with open(ARQUIVO_DADOS, 'w', encoding='utf-8') as arquivo:
+        json.dump(dados, arquivo, indent=4, ensure_ascii=False) # Salva os dados no arquivo com indentação para melhor leitura
 
+# FUnção principal do programa, que exibe o menu e executa as ações selecionadas pelo usuário
 def main():
-    """
-    Função principal que inicia o programa
-    """
-    os.system('cls')  # Limpa a tela (funciona apenas no Windows)
-    exibir_nome_do_programa()
-    exibir_opcoes()
-    escolher_opcao()
+    carregar_dados()
 
-if __name__ == '__main__':
-    main()
+    while True:
+        os.system('cls' if os.name == 'nt' else 'clear') # Limpa a tela antes de exibir o menu
+        print("=-=-=-=-= Restaurante Expresso =-=-=-=-=")
+        print("\n1. Cadastrar restaurante")
+        print("2. Listar restaurantes")
+        print("3. Habilitar restaurantes")
+        print("4. Avaliar restaurantes")
+        print("5. Alterar restaurantes")
+        print("6. Excluir restaurante")
+        print("7. Sair")
+
+        opcao = input("\nEscolha uma opção: ")
+
+        # Chama a função correspondente à opção escolhida
+        if opcao == '1':
+            cadastrar_restaurante()
+        elif opcao == '2':
+            listar_restaurantes()
+        elif opcao == '3':
+            habilitar_restaurante()
+        elif opcao == '4':
+            avaliar_restaurante()
+        elif opcao == '5':
+            alterar_restaurante()
+        elif opcao == '6':
+            excluir_restaurante()
+        elif opcao == '7':
+            salvar_dados() # Salva os dados antes de sair
+            print("\nDados salvos. Obrigado por usar o sistema. Até logo!")
+            break
+        else:
+            print("Opção inválida. Tente novamente.")
+
+        input("\nPressione Enter para continuar...")
 
 
+# Função para cadastrar um novo restaurante
+def cadastrar_restaurante():
+    nome = input("Digite o nome do restaurante: ")
+    categoria = input("Digite a categoria do restaurante: ")
+    novo_restaurante = Restaurante(nome, categoria) # Cria um novo objeto restaurante
+    print(f"\nRestaurante {nome} cadastrado com sucesso!")
+    salvar_dados() # Salva os dados após o cadastro
 
-                
+#Função para listar todos os restaurantes cadastrados
+def listar_restaurantes():
+    print("Lista de Restaurantes:")
+    Restaurante.listar_restaurantes()
+
+#Função para habilitar ou desablitar um restaurante
+def habilitar_restaurante():
+    nome = input("Digite o nome do restaurante que deseja habilitar/desabilitar: ")
+    for restaurante in Restaurante.restaurantes:
+        if restaurante._nome._lower() == nome.lowe():
+            restaurante.alternar_estado() #Altera o estado do restaurante(ativo/inativo)
+            print(f"Estado do restaurante {restaurante._nome} alterado para {restaurante.ativo}")
+            salvar_dados() # Salva os dados após a alteração
+            return
+        print("Restaurante não encontrado.")
+
+#Função para adicionar uma avaliação a um restaurante
+def avaliar_restaurante():
+    nome = input("Digite o nome do restaurante que deseja avaliar: ")
+    for restaurante in Restaurante.restaurantes:
+        if restaurante._nome.lower() == nome.lower():
+            cliente = input("Digite seu nome: ")
+            while True:
+                try:
+                    nota = float(input("Digite a nota(de 0 a 10): "))
+                    if 0 <= nota <= 10:
+                        restaurante.receber_avaliacao(cliente, nota) # Sdicione a avaliação ao restaurante
+                        print("Avaliação registrada com sucesso!")
+                        salvar_dados() # Salva os dados após a avaliação
+                        return
+                    else:
+                        print("A nota deve estar entre 0 e 10.")
+                except ValueError:
+                    print("Por favor, digite um número válido.")
+    print("Restaurante não encontrado.")
+
+# Função para alterar as informações de um restaurante
+def alterar_restaurante():
+    nome = input("Digite o nome do restaurante que deseja alterar: ")
+    for restaurante in Restaurante.resturantes:
+        if restaurante._nome.lower() == nome.lower():
+            novo_nome = input(f"Digite o novo nome do restaurante(atual : {restaurante._nome}): ")
+            nova_categoria = input(f"Digite a nova categoria do restaurante (atual: {restaurante._categoria}): ")
+
+            # Atualiza o nome e a categoria do restaurante se forem fornecidos novos valores
+            if novo_nome:
+                restaurante._nome = novo_nome.title()
+            if nova_categoria:
+                restaurante._categoria = nova_categoria.upper()
+
+                print(f"Restaurante alterado com sucesso para: {restaurante}")
+                salvar_dados() # Salva os dados após a alteração
+                return
+            print("Restaurante não encontradi.")
+
+        #Função para excluir um restaurante da lista
+def excluir_restaurante():
+            nome = input("Digite o nome do restaurante que deseja excluir: ")
+            for restaurante in Restaurante.restaurantes:
+                if restaurante._nome.lower() == nome.lower():
+                    confirmacao = input(f"Tem certeza que deseja excluir o restaurante '{restaurante._nome}'?")
+                    if confirmacao.lower() == 's':
+                        Restaurante.restaurantes.remove(restaurante) # Remove o restaurante da lista
+                        print(f"Restaurante '{restaurante._nome}' excluído com sucesso")
+                        salvar_dados() # Salva os dados após a exclusão
+                    else:
+                        print("Operação de exclusão cancelada.")
+                    return
+                print("Restaurante não encontrado.")
+
+            #Verifica se o script está sendo executado diretamente e chama a função principal
+            if __name__ == '__main__':
+                main()
